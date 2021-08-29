@@ -63,37 +63,63 @@ Required environment variables:
 - `SALT` - A secret string used to encrypt user sub values
   import adapter from 'svelte-kit-adapter-cloudflare-workers-auth0';
 
-See the [Cloudflare documentation](https://developers.cloudflare.com/workers/platform/sites/start-from-existing) for additional information on configuring Cloudflare Workers
+#### Cloudflare KV configuration
 
-### Auth State Hydration
+Create a Cloudflare KV store with the name `AUTH_STORE`.
 
-Opt in by adding a script to your root HTML page with the ID `edge_auth_state`:
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    %svelte.head%
-  </head>
-  <body>
-    <div id="svelte">%svelte.body%</div>
-  </body>
-
-  <!-- OPTIONAL - Adapter is configured to insert user authorization info in a script with this ID -->
-  <script id="edge_auth_state" type="application/json">
-    {}
-  </script>
-</html>
 ```
+wrangler kv:namespace create AUTH_STORE
+```
+
+Copy the output of this command into your `wrangler.toml` file.
+
+Full example with different environments:
+
+```toml
+type = "javascript"
+account_id = '<ACCOUNT_ID>'
+usage_model = ''
+compatibility_flags = []
+
+[site]
+bucket = './build'
+entry-point = './workers-site'
+
+[build]
+command = "npm install && npm run build"
+
+[build.upload]
+format = "service-worker"
+
+[env.dev]
+workers_dev = true
+name = '<NAME_OF_DEV_ENV_WORKERS>'
+route = 'https://<DEV_ROUTE>.<WORKERS_SUBDOMAIN>.workers.dev/*'
+kv-namespaces = [
+  { binding = "AUTH_STORE", id = "<OUTPUT_FROM_KV_NAMESPACE_CREATE>" }
+]
+
+[env.production]
+zone_id = '<OPTIONAL_ZONE_ID>'
+name = '<NAME_OF_PROD_ENV_WORKERS>'
+route = '<PROD_HOSTNAME>/*'
+kv-namespaces = [
+  { binding = "AUTH_STORE", id = "<OUTPUT_FROM_KV_NAMESPACE_CREATE>" }
+]
+
+# [secrets]
+# AUTH0_DOMAIN
+# AUTH0_CLIENT_ID
+# AUTH0_CLIENT_SECRET
+# AUTH0_CALLBACK_URL
+# AUTH0_LOGOUT_URL
+# SALT
+```
+
+See the [Cloudflare documentation](https://developers.cloudflare.com/workers/platform/sites/start-from-existing) for additional information on configuring Cloudflare Workers
 
 ### Resources
 
 This adapter is largely a direct copy of [@sveltejs/adapter-cloudflare-workers](https://github.com/sveltejs/kit/tree/master/packages/adapter-cloudflare-workers), with support for authentication and basic authorization on the 'server'-side.
 
 Auth0 support was based on the official [Cloudflare Workers Auth0 tutorial](https://developers.cloudflare.com/workers/tutorials/authorize-users-with-auth0).
-
-Full documentation to come soon if folks are interestd in this :smile:
